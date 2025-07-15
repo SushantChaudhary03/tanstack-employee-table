@@ -1,4 +1,7 @@
 export const defaultSettings = {
-    pagination: true,
-    filter: true
+    pagination: {
+        rowsPerPage: 10,
+        position: "topRight" // topRight, bottomRight,topLeft, bottomLeft 
+    },
+    filter: true,
 }

@@ -6,10 +6,17 @@ const TableLoader = () => {
   const [data, setData] = useState([]);
 
   useEffect(() => {
-    fetch('/employeesData/employees.json')
-      .then(res => res.json())
-      .then(setData)
-      .catch(console.error);
+    const loadData = async () => {
+      try {
+        const res = await fetch('/employeesData/employees.json');
+        const jsonData = await res.json();
+        setData(jsonData);
+      } catch (error) {
+        console.error('Failed to load data:', error);
+      }
+    };
+
+    loadData();
   }, []);
 
   const columns = [
@@ -43,7 +50,7 @@ const TableLoader = () => {
       filterFn: 'number',
       meta: {
         Filter: NumberFilter,
-        totalType: 'avg'      // Types 'sum', 'avg', 'min', 'max', 'product'
+        totalType: 'avg', // Options: sum, avg, min, max, product
       },
     },
     {
@@ -56,7 +63,7 @@ const TableLoader = () => {
       accessorKey: 'phoneNumber',
       header: 'Phone Number',
       filterFn: 'text',
-      meta: { Filter: TextFilter },
+      meta: { Filter: TextFilter},
     },
     {
       accessorKey: 'position',
@@ -86,7 +93,13 @@ const TableLoader = () => {
     <Table
       data={data}
       columns={columns}
-      settings={{ filter: true, pagination: true }}
+      settings={{
+        filter: true,
+        pagination: {
+          pageSize: 20,
+          position: 'bottomLeft',
+        },
+      }}
     />
   );
 };

@@ -9,21 +9,22 @@ import {
 import { useState } from 'react';
 import Pagination from './Pagination';
 import { defaultSettings } from '../default';
-import { TextFilter, NumberFilter, DateFilter } from './Filters';
+import { TableWrapper } from './TableStyle';
 
 const Table = ({ data, columns, settings = {} }) => {
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 20,
-  });
-
-  const [columnFilters, setColumnFilters] = useState([]);
-  const [sorting, setSorting] = useState([]);
-
   const finalSettings = {
     ...defaultSettings,
     ...settings,
   };
+
+  const paginationPosition = finalSettings.pagination?.position;
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: finalSettings.pagination?.pageSize || defaultSettings.pagination.rowsPerPage,
+  });
+
+  const [columnFilters, setColumnFilters] = useState([]);
+  const [sorting, setSorting] = useState([]);
 
   const table = useReactTable({
     data,
@@ -35,10 +36,10 @@ const Table = ({ data, columns, settings = {} }) => {
     },
     onPaginationChange: setPagination,
     onColumnFiltersChange: setColumnFilters,
+    onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
     filterFns: {
       text: (row, columnId, filterValue) => {
@@ -70,17 +71,17 @@ const Table = ({ data, columns, settings = {} }) => {
 
         switch (operator) {
           case 'eq':
-            return value !== undefined ? cellValue === value : true;
+            return value !== undefined ? cellValue === Number(value) : true;
           case 'neq':
-            return value !== undefined ? cellValue !== value : true;
+            return value !== undefined ? cellValue !== Number(value) : true;
           case 'lt':
-            return value !== undefined ? cellValue < value : true;
+            return value !== undefined ? cellValue < Number(value) : true;
           case 'lte':
-            return value !== undefined ? cellValue <= value : true;
+            return value !== undefined ? cellValue <= Number(value) : true;
           case 'gt':
-            return value !== undefined ? cellValue > value : true;
+            return value !== undefined ? cellValue > Number(value) : true;
           case 'gte':
-            return value !== undefined ? cellValue >= value : true;
+            return value !== undefined ? cellValue >= Number(value) : true;
           case 'empty':
             return cellValue === null || cellValue === undefined || cellValue === '';
           case 'notEmpty':
@@ -89,54 +90,77 @@ const Table = ({ data, columns, settings = {} }) => {
             return true;
         }
       },
+      date: (row, columnId, filterValue) => {
+        const cellDate = new Date(row.getValue(columnId));
+        if (!filterValue || typeof filterValue !== 'object') return true;
+
+        const { operator, value, startDate, endDate } = filterValue;
+
+        if (isNaN(cellDate.getTime())) return false;
+
+        switch (operator) {
+          case 'eq':
+            return value ? cellDate.toDateString() === new Date(value).toDateString() : true;
+          case 'before':
+            return value ? cellDate < new Date(value) : true;
+          case 'after':
+            return value ? cellDate > new Date(value) : true;
+          case 'between':
+            if (!startDate || !endDate) return true;
+            return cellDate >= new Date(startDate) && cellDate <= new Date(endDate);
+          case 'empty':
+            return !row.getValue(columnId);
+          default:
+            return true;
+        }
+      },
     },
   });
 
   return (
-    <div className="table-wrapper">
-      {finalSettings.pagination && <Pagination table={table} />}
+    <TableWrapper>
+      {/* Top Pagination */}
+      {finalSettings.pagination &&
+        (paginationPosition === 'topLeft' || paginationPosition === 'topRight') && (
+          <Pagination table={table} position={paginationPosition} />
+        )}
 
-      <table
-        border="1"
-        style={{
-          borderCollapse: 'collapse',
-          width: '100%',
-          position: 'relative',
-        }}
-      >
+      <table className="table">
         <thead>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th key={header.id} style={{ padding: '8px' }}>
-                  {flexRender(header.column.columnDef.header, header.getContext())}
-                  <div
-                    className="soriting"
-                    onClick={header.column.getToggleSortingHandler()}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {header.column.getIsSorted() === 'asc' && '⬆️'}
-                    {header.column.getIsSorted() === 'desc' && '⬇️'}
-                    {header.column.getIsSorted() === false && '➡️'}
-                  </div>
-
-                  {finalSettings.filter &&
-                    header.column.getCanFilter() &&
-                    header.column.columnDef.meta?.Filter && (
-                      <div style={{ marginTop: 4 }}>
-                        <header.column.columnDef.meta.Filter column={header.column} />
+              {headerGroup.headers.map((header) => {
+                const FilterComponent = header.column.columnDef.meta?.Filter;
+                return (
+                  <th key={header.id}>
+                    <div className="table-header">
+                      <div>
+                        {flexRender(header.column.columnDef.header, header.getContext())}
                       </div>
-                    )}
-                </th>
-              ))}
+                      <div className="sorting-buttons">
+                        <button onClick={() => header.column.toggleSorting(false)}>▲</button><br />
+                        <button onClick={() => header.column.toggleSorting(true)}>▼</button>
+                      </div>
+                      {finalSettings.filter &&
+                        header.column.getCanFilter() &&
+                        FilterComponent && (
+                          <div style={{ marginTop: 4 }}>
+                            <FilterComponent column={header.column} />
+                          </div>
+                        )}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           ))}
         </thead>
+
         <tbody>
           {table.getRowModel().rows.map((row) => (
             <tr key={row.id}>
               {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} style={{ padding: '8px' }}>
+                <td key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
@@ -144,57 +168,63 @@ const Table = ({ data, columns, settings = {} }) => {
           ))}
         </tbody>
 
-        {/* ✅ Total Row Footer - Only if at least one totalType is defined */}
+        {/* Footer Totals Row */}
         {table.getHeaderGroups()[0].headers.some(
           (header) => header.column.columnDef.meta?.totalType
         ) && (
-          <tfoot>
-            <tr>
-              {table.getHeaderGroups()[0].headers.map((header) => {
-                const { totalType } = header.column.columnDef.meta || {};
-                const columnId = header.column.id;
+            <tfoot>
+              <tr>
+                {table.getHeaderGroups()[0].headers.map((header) => {
+                  const { totalType } = header.column.columnDef.meta || {};
+                  const columnId = header.column.id;
 
-                if (!totalType) return <td key={columnId}></td>;
+                  if (!totalType) return <td key={columnId}></td>;
 
-                const values = table.getFilteredRowModel().rows.map(row =>
-                  row.getValue(columnId)
-                );
-                const numericValues = values.filter((v) => typeof v === 'number');
+                  const values = table.getFilteredRowModel().rows.map((row) =>
+                    row.getValue(columnId)
+                  );
+                  const numericValues = values.filter((v) => typeof v === 'number');
 
-                let total;
-                switch (totalType) {
-                  case 'sum':
-                    total = numericValues.reduce((a, b) => a + b, 0);
-                    break;
-                  case 'avg':
-                    total = numericValues.length
-                      ? numericValues.reduce((a, b) => a + b, 0) / numericValues.length
-                      : 0;
-                    break;
-                  case 'min':
-                    total = numericValues.length ? Math.min(...numericValues) : '';
-                    break;
-                  case 'max':
-                    total = numericValues.length ? Math.max(...numericValues) : '';
-                    break;
-                  case 'product':
-                    total = numericValues.reduce((a, b) => a * b, 1);
-                    break;
-                  default:
-                    total = '';
-                }
+                  let total;
+                  switch (totalType) {
+                    case 'sum':
+                      total = numericValues.reduce((a, b) => a + b, 0);
+                      break;
+                    case 'avg':
+                      total = numericValues.length
+                        ? numericValues.reduce((a, b) => a + b, 0) / numericValues.length
+                        : 0;
+                      break;
+                    case 'min':
+                      total = numericValues.length ? Math.min(...numericValues) : '';
+                      break;
+                    case 'max':
+                      total = numericValues.length ? Math.max(...numericValues) : '';
+                      break;
+                    case 'product':
+                      total = numericValues.reduce((a, b) => a * b, 1);
+                      break;
+                    default:
+                      total = '';
+                  }
 
-                return (
-                  <td key={columnId} style={{ fontWeight: 'bold', background: '#f5f5f5' }}>
-                    {total}
-                  </td>
-                );
-              })}
-            </tr>
-          </tfoot>
-        )}
+                  return (
+                    <td key={columnId} style={{ fontWeight: 'bold', background: '#f5f5f5' }}>
+                      {total}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tfoot>
+          )}
       </table>
-    </div>
+
+      {/* Bottom Pagination */}
+      {finalSettings.pagination &&
+        (paginationPosition === 'bottomLeft' || paginationPosition === 'bottomRight') && (
+          <Pagination table={table} position={paginationPosition} />
+        )}
+    </TableWrapper>
   );
 };
 

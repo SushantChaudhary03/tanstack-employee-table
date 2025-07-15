@@ -2,23 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { FilterStyle } from './TableStyle';
 
-const dropdown = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '10px',
-  height: '15vh',
-  position: 'fixed',
-  top: '20%',
-  left: '40%',
-  backgroundColor: '#fff',
-  border: '1px solid #ccc',
-  padding: 8,
-  borderRadius: 4,
-  zIndex: 1000,
-  minWidth: '200px',
-  boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-};
 
 export const TextFilter = ({ column }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,10 +29,10 @@ export const TextFilter = ({ column }) => {
   };
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
-      <span onClick={() => setIsOpen((v) => !v)} style={{ cursor: 'pointer' }}>🔍</span>
+    <FilterStyle ref={ref}>
+      <span onClick={() => setIsOpen((v) => !v)}>🔍</span>
       {isOpen && (
-        <div style={dropdown}>
+        <div className='dropdown'>
           <select value={draft.operator} onChange={(e) => setDraft(prev => ({ ...prev, operator: e.target.value }))}>
             <option value="contains">contains</option>
             <option value="eq">equals</option>
@@ -63,10 +48,10 @@ export const TextFilter = ({ column }) => {
               placeholder="Enter text"
             />
           )}
-          <button onClick={applyFilter}>Submit</button>
+          <button id='submit' onClick={applyFilter}>Submit</button>
         </div>
       )}
-    </div>
+    </FilterStyle>
   );
 };
 
@@ -94,10 +79,10 @@ export const NumberFilter = ({ column }) => {
   };
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <FilterStyle ref={ref}>
       <span onClick={() => setIsOpen(v => !v)} style={{ cursor: 'pointer' }}>🔢</span>
       {isOpen && (
-        <div style={dropdown}>
+        <div className='dropdown'>
           <select value={draft.operator} onChange={(e) => setDraft(prev => ({ ...prev, operator: e.target.value }))}>
             <option value="eq">equals</option>
             <option value="neq">not equals</option>
@@ -113,10 +98,10 @@ export const NumberFilter = ({ column }) => {
               placeholder="Enter number"
             />
           )}
-          <button onClick={applyFilter}>Submit</button>
+          <button id='submit' onClick={applyFilter}>Submit</button>
         </div>
       )}
-    </div>
+    </FilterStyle>
   );
 };
 
@@ -144,28 +129,34 @@ export const DateFilter = ({ column }) => {
   };
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <FilterStyle ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
       <span onClick={() => setIsOpen((v) => !v)} style={{ cursor: 'pointer' }}>📅</span>
       {isOpen && (
-        <div style={dropdown}>
-          <select value={draft.operator} onChange={(e) => setDraft(prev => ({ ...prev, operator: e.target.value }))}>
+        <div className='dropdown'>
+          <select
+            value={draft.operator}
+            onChange={(e) => setDraft(prev => ({ ...prev, operator: e.target.value }))}
+          >
             <option value="eq">equals</option>
             <option value="before">before</option>
             <option value="after">after</option>
             <option value="between">between</option>
             <option value="empty">empty</option>
           </select>
+
           {draft.operator === 'between' ? (
             <>
               <DatePicker
                 selected={draft.startDate}
                 onChange={(d) => setDraft(prev => ({ ...prev, startDate: d }))}
                 placeholderText="Start date"
+                dateFormat="dd/MM/yyyy"
               />
               <DatePicker
                 selected={draft.endDate}
                 onChange={(d) => setDraft(prev => ({ ...prev, endDate: d }))}
                 placeholderText="End date"
+                dateFormat="dd/MM/yyyy"
               />
             </>
           ) : draft.operator !== 'empty' ? (
@@ -173,11 +164,13 @@ export const DateFilter = ({ column }) => {
               selected={draft.value}
               onChange={(d) => setDraft(prev => ({ ...prev, value: d }))}
               placeholderText="Pick date"
+              dateFormat="dd/MM/yyyy"
             />
           ) : null}
-          <button onClick={applyFilter}>Submit</button>
+
+          <button id='submit' onClick={applyFilter} style={{ backgroundColor: 'skyblue' }}>Submit</button>
         </div>
       )}
-    </div>
+    </FilterStyle>
   );
 };
