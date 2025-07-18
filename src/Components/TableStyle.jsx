@@ -1,5 +1,5 @@
-import React from 'react';
-import styled from 'styled-components';
+import React from "react";
+import styled from "styled-components";
 
 export const TableWrapper = styled.div`
   width: 100%;
@@ -10,49 +10,52 @@ export const TableWrapper = styled.div`
     border-collapse: collapse;
     background-color: #fff;
     position: relative;
-    font-family: 'Lato';
+    font-family: "Lato";
+    table-layout: fixed;
 
     thead {
       tr {
-      background: linear-gradient(to right, #3E9EFF, #737DFF);
+        background: linear-gradient(to right, #3e9eff, #737dff);
 
-         th {
+        th {
           color: #fff;
           padding: 0.5rem;
-          width: 60%;
+          width: 100%;
           text-align: center;
           font-size: 1rem;
 
-          .table-header{
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          min-width: 12rem;
+          .table-header {
+            display: flex;
+            justify-content:  ${(props) => props.$postion === 'start' ? 'start' : 'center'};
+            padding-left: ${(props) => props.$postion ==='start' ? '0.8rem' : ''};
+            align-items: center;
+            min-width: 12rem;
 
-          .sorting-buttons button{
-           color: #fff;
-           border: none;
-          }
+            .sorting-buttons button {
+              color: #fff;
+              border: none;
+            }
 
-            button{
-            cursor: pointer;
-            background: none;
-            border: none;
+            button {
+              cursor: pointer;
+              background: none;
+              border: none;
             }
           }
-         }
+        }
       }
     }
 
     tbody {
       tr {
         td {
-          text-align: center;
+          text-align: ${(props)=> props.$postion === 'start' ? 'start' : 'center'};
+          padding-left: ${(props) => props.$postion ==='start' ? '1.2rem' : ''};
           height: 10vh;
         }
       }
 
-      tr:nth-child(2n){
+      tr:nth-child(2n) {
         background-color: #f5f5f5;
       }
     }
@@ -60,10 +63,10 @@ export const TableWrapper = styled.div`
     tfoot {
       tr {
         td {
-          padding: 0.5rem;
+         padding-left: ${(props) => props.$postion ==='start' ? '1.2rem' : ''};
           border: 1px solid #ccc;
           background-color: #fff;
-          text-align: center;
+          text-align: ${(props)=> props.$postion === 'start' ? 'start' : 'center'};
         }
       }
     }
@@ -117,7 +120,7 @@ export const PaginationWrapper = styled.div`
     align-items: center;
 
     button {
-      background: linear-gradient(to right, #3E9EFF, #737DFF);
+      background: linear-gradient(to right, #3e9eff, #737dff);
       color: #fff;
       border: none;
       padding: 0.4rem 0.75rem;
@@ -153,16 +156,15 @@ export const PaginationWrapper = styled.div`
   }
 `;
 
-
 export const FilterStyle = styled.div`
   position: relative;
   display: inline-block;
 
-  span{
+  span {
     cursor: pointer;
   }
 
-  .dropdown{
+  .dropdown {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -177,20 +179,19 @@ export const FilterStyle = styled.div`
     z-index: 10;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 
-    select{
+    select {
       width: 100%;
       padding: 0.4rem 0.2rem;
       border-radius: 6px;
       outline: none;
 
-      &:focus{
+      &:focus {
         border-color: #007bff;
         box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
       }
-
     }
 
-    input{
+    input {
       padding: 0.3rem 0.4rem;
       font-size: 0.8rem;
       border-radius: 4px;
@@ -198,21 +199,21 @@ export const FilterStyle = styled.div`
       border: 1px solid #ccc;
       outline: none;
 
-      &:focus{
+      &:focus {
         border-color: #007bff;
         box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
       }
     }
 
-    #submit{
-      background: linear-gradient(to right, #3E9EFF, #737DFF);
+    #submit {
+      background: linear-gradient(to right, #3e9eff, #737dff);
       color: #fff;
       margin: 0.4rem 0;
       width: 50%;
       padding: 5px;
       border-radius: 4px;
 
-      &:hover{
+      &:hover {
         background: linear-gradient(to right, #3282d3, #555edd);
       }
     }

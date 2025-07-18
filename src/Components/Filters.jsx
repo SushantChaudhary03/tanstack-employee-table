@@ -28,6 +28,10 @@ export const TextFilter = ({ column }) => {
     setIsOpen(false);
   };
 
+  const Btn = ()=>{
+    return <button>Submit</button>
+  }
+
   return (
     <FilterStyle ref={ref}>
       <span onClick={() => setIsOpen((v) => !v)}>🔍</span>
@@ -93,6 +97,7 @@ export const NumberFilter = ({ column }) => {
           {draft.operator !== 'empty' && (
             <input
               type="number"
+              min="0"
               value={draft.value ?? ''}
               onChange={(e) => setDraft(prev => ({ ...prev, value: e.target.value }))}
               placeholder="Enter number"
@@ -150,12 +155,6 @@ export const DateFilter = ({ column }) => {
                 selected={draft.startDate}
                 onChange={(d) => setDraft(prev => ({ ...prev, startDate: d }))}
                 placeholderText="Start date"
-                dateFormat="dd/MM/yyyy"
-              />
-              <DatePicker
-                selected={draft.endDate}
-                onChange={(d) => setDraft(prev => ({ ...prev, endDate: d }))}
-                placeholderText="End date"
                 dateFormat="dd/MM/yyyy"
               />
             </>

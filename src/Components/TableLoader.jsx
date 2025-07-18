@@ -42,6 +42,7 @@ const TableLoader = () => {
       accessorKey: 'email',
       header: 'Email',
       filterFn: 'text',
+      size: '250',
       meta: { Filter: TextFilter },
     },
     {
@@ -56,12 +57,14 @@ const TableLoader = () => {
     {
       accessorKey: 'address',
       header: 'Address',
+      size: '300',
       filterFn: 'text',
       meta: { Filter: TextFilter },
     },
     {
       accessorKey: 'phoneNumber',
       header: 'Phone Number',
+      size: '200',
       filterFn: 'text',
       meta: { Filter: TextFilter},
     },
