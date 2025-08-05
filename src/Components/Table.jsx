@@ -4,20 +4,33 @@ import {
   getPaginationRowModel,
   getFilteredRowModel,
   getSortedRowModel,
-  flexRender,
 } from "@tanstack/react-table";
 import { useState } from "react";
 import Pagination from "./Pagination";
 import { defaultSettings } from "../default";
-import { TableWrapper } from "./TableStyle";
+import { TableWrapper } from "./TableStyle"; // styled-component wrapper
+import SortingBtn from "../assets/SortingButtons/SortingDown";
+import SortingBtnUp from "../assets/SortingButtons/SortingUp";
+import { TableContext } from "./TableContext";
 
-const Table = ({ data, columns, settings = {} }) => {
+const Table = ({
+  data,
+  columns,
+  columnVisibility,
+  onColumnVisibilityChange,
+  settings = {},
+}) => {
   const finalSettings = {
     ...defaultSettings,
     ...settings,
   };
 
+  const [columnSizing, setColumnSizing] = useState(() => {
+    return JSON.parse(localStorage.getItem("columnSizing") || "{}");
+  });
+
   const paginationPosition = finalSettings.pagination?.position;
+
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize:
@@ -27,16 +40,25 @@ const Table = ({ data, columns, settings = {} }) => {
 
   const [columnFilters, setColumnFilters] = useState([]);
   const [sorting, setSorting] = useState([]);
-  const [columnSizing, setColumnSizing] = useState({});
 
   const table = useReactTable({
     data,
     columns,
+    columnResizeMode: "onChange",
     state: {
       pagination,
       columnFilters,
       sorting,
       columnSizing,
+      columnVisibility,
+    },
+    onColumnVisibilityChange,
+
+    onColumnSizingChange: (updater) => {
+      const newSizing =
+        typeof updater === "function" ? updater(columnSizing) : updater;
+      setColumnSizing(newSizing);
+      localStorage.setItem("columnSizing", JSON.stringify(newSizing));
     },
     onPaginationChange: setPagination,
     onColumnFiltersChange: setColumnFilters,
@@ -46,15 +68,13 @@ const Table = ({ data, columns, settings = {} }) => {
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     enableColumnResizing: true,
-    columnResizeMode: "onChange",
-    onColumnSizingChange: setColumnSizing,
+
     filterFns: {
       text: (row, columnId, filterValue) => {
         const cellValue = (row.getValue(columnId) || "")
           .toString()
           .toLowerCase();
         if (!filterValue || typeof filterValue !== "object") return true;
-
         const { operator, value } = filterValue;
 
         switch (operator) {
@@ -75,7 +95,6 @@ const Table = ({ data, columns, settings = {} }) => {
       number: (row, columnId, filterValue) => {
         const cellValue = row.getValue(columnId);
         if (!filterValue || typeof filterValue !== "object") return true;
-
         const { operator, value } = filterValue;
 
         switch (operator) {
@@ -121,12 +140,16 @@ const Table = ({ data, columns, settings = {} }) => {
           case "after":
             return value ? cellDate > new Date(value) : true;
           case "between":
+          case "month":
+          case "year":
             if (!startDate || !endDate) return true;
             return (
               cellDate >= new Date(startDate) && cellDate <= new Date(endDate)
             );
           case "empty":
             return !row.getValue(columnId);
+          case "notEmpty":
+            return !!row.getValue(columnId);
           default:
             return true;
         }
@@ -135,151 +158,217 @@ const Table = ({ data, columns, settings = {} }) => {
   });
 
   return (
-    <TableWrapper $postion="start">
-      {/* Top Pagination */}
-      {finalSettings.pagination &&
-        (paginationPosition === "topLeft" ||
-          paginationPosition === "topRight") && (
-          <Pagination table={table} position={paginationPosition} />
-        )}
+    <TableContext.Provider value={table}>
+      <TableWrapper
+        $primaryRowColor={finalSettings.colors?.primaryRow}
+        $secondaryRowColor={finalSettings.colors?.secondaryRow}
+        $headerColor={finalSettings.colors?.headers?.[0]}
+        $headerFont={finalSettings.fonts?.headers?.[0]}
+        $rowFont={finalSettings.fonts?.rows}
+      >
+        {finalSettings.pagination &&
+          (paginationPosition === "topLeft" ||
+            paginationPosition === "topRight") && (
+            <Pagination table={table} position={paginationPosition} />
+          )}
+        {/* <ColumnVisibilityToggle table={table}/> */}
+        <div className="table-wrapper">
+          <table
+            className={`table ${
+              finalSettings.columnBorders ? "with-column-borders" : ""
+            }`}
+          >
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => {
+                    const FilterComponent =
+                      header.column.columnDef.meta?.filterComponent;
 
-      <table className="table">
-        <thead>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => {
-                const FilterComponent = header.column.columnDef.meta?.Filter;
-                return (
-                  <th
-                    key={header.id}
-                    style={{ width: header.column.getSize() }}
-                  >
-                    <div className="table-header">
-                      <div>
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                      </div>
-                      <div className="sorting-buttons">
-                        <button
-                          onClick={() => header.column.toggleSorting(false)}
-                        >
-                          ▲
-                        </button>
-                        <br />
-                        <button
-                          onClick={() => header.column.toggleSorting(true)}
-                        >
-                          ▼
-                        </button>
-                      </div>
-                      {finalSettings.filter &&
-                        header.column.getCanFilter() &&
-                        FilterComponent && (
-                          <div style={{ marginTop: 4 }}>
-                            <FilterComponent column={header.column} />
+                    return (
+                      <th
+                        key={header.id}
+                        style={{ width: header.column.getSize() }}
+                      >
+                        <div className="table-header">
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "center",
+                              alignItems: "center",
+                              width: "100%",
+                            }}
+                          >
+                            <div style={{ width: "100%" }}>
+                              {header.column.columnDef.header}
+                            </div>
+                            {table
+                              .getPrePaginationRowModel()
+                              .rows.some((row) => {
+                                const val = row.getValue(header.column.id);
+                                return (
+                                  val !== null &&
+                                  val !== undefined &&
+                                  val !== ""
+                                );
+                              }) && (
+                              <div className="sorting-buttons hidden">
+                                <button
+                                  onClick={() =>
+                                    header.column.toggleSorting(false)
+                                  }
+                                >
+                                  <SortingBtnUp
+                                    color={
+                                      header.column.getIsSorted() === "asc"
+                                        ? "#1f2937"
+                                        : "#fff"
+                                    }
+                                    width="0.6rem"
+                                    height="0.6rem"
+                                  />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    header.column.toggleSorting(true)
+                                  }
+                                >
+                                  <SortingBtn
+                                    color={
+                                      header.column.getIsSorted() === "desc"
+                                        ? "#1f2937"
+                                        : "#fff"
+                                    }
+                                    width="0.6rem"
+                                    height="0.6rem"
+                                  />
+                                </button>
+                              </div>
+                            )}
+
+                            {finalSettings.filter &&
+                              header.column.getCanFilter() &&
+                              FilterComponent && (
+                                <div style={{ marginTop: 5 }}>
+                                  <FilterComponent column={header.column} />
+                                </div>
+                              )}
                           </div>
+                        </div>
+                        {header.column.getCanResize() && (
+                          <div
+                            onMouseDown={header.getResizeHandler()}
+                            onTouchStart={header.getResizeHandler()}
+                            className="resizer"
+                          />
                         )}
-                    </div>
-                  </th>
-                );
-              })}
-            </tr>
-          ))}
-        </thead>
-
-        <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td key={cell.id} style={{ width: cell.column.getSize() }}>
-                  {flexRender(
-                    cell.column.columnDef.cell ?? (() => cell.getValue()),
-                    cell.getContext()
-                  )}
-                </td>
+                      </th>
+                    );
+                  })}
+                </tr>
               ))}
-            </tr>
-          ))}
-        </tbody>
+            </thead>
 
-        {/* Footer Totals Row */}
-        {table
-          .getHeaderGroups()[0]
-          .headers.some(
-            (header) => header.column.columnDef.meta?.totalType
-          ) && (
-          <tfoot>
-            <tr>
-              {table.getHeaderGroups()[0].headers.map((header) => {
-                const { totalType } = header.column.columnDef.meta || {};
-                const columnId = header.column.id;
-
-                if (!totalType) return <td key={columnId}></td>;
-
-                const values = table
-                  .getFilteredRowModel()
-                  .rows.map((row) => row.getValue(columnId));
-                const numericValues = values.filter(
-                  (v) => typeof v === "number"
-                );
-
-                let total;
-                switch (totalType) {
-                  case "sum":
-                    total = numericValues.reduce((a, b) => a + b, 0);
-                    break;
-                  case "avg":
-                    total = numericValues.length
-                      ? numericValues.reduce((a, b) => a + b, 0) /
-                        numericValues.length
-                      : 0;
-                    break;
-                  case "min":
-                    total = numericValues.length
-                      ? Math.min(...numericValues)
-                      : "";
-                    break;
-                  case "max":
-                    total = numericValues.length
-                      ? Math.max(...numericValues)
-                      : "";
-                    break;
-                  case "product":
-                    total = numericValues.reduce((a, b) => a * b, 1);
-                    break;
-                  default:
-                    total = "";
-                }
-
-                return (
+            <tbody>
+              {table.getRowModel().rows.length > 0 ? (
+                table.getRowModel().rows.map((row) => (
+                  <tr key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id}>
+                        {cell.column.columnDef.cell
+                          ? cell.column.columnDef.cell(cell.getContext())
+                          : cell.getValue()}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : table.getPreFilteredRowModel().rows.length > 0 ? (
+                <tr>
                   <td
-                    key={columnId}
+                    colSpan={table.getAllLeafColumns().length}
                     style={{
-                      fontWeight: "bold",
-                      background: "#f5f5f5",
-                      width: header.column.getSize(),
+                      textAlign: "center",
+                      padding: "1rem",
+                      fontStyle: "italic",
+                      color: "#999",
                     }}
                   >
-                    {total}
+                    No matching results. Try changing the filter or search.
                   </td>
-                );
-              })}
-            </tr>
-          </tfoot>
-        )}
-      </table>
+                </tr>
+              ) : null}
+            </tbody>
 
-      {/* Bottom Pagination */}
-      {finalSettings.pagination &&
-        (paginationPosition === "bottomLeft" ||
-          paginationPosition === "bottomRight") && (
-          <Pagination table={table} position={paginationPosition} />
-        )}
-    </TableWrapper>
+            {table
+              .getHeaderGroups()[0]
+              .headers.some(
+                (header) => header.column.columnDef.meta?.totalType
+              ) && (
+              <tfoot>
+                <tr>
+                  {table.getHeaderGroups()[0].headers.map((header) => {
+                    const { totalType } = header.column.columnDef.meta || {};
+                    const columnId = header.column.id;
+
+                    if (!totalType) return <td key={columnId}></td>;
+
+                    const values = table
+                      .getFilteredRowModel()
+                      .rows.map((row) => row.getValue(columnId));
+                    const numericValues = values.filter(
+                      (v) => typeof v === "number"
+                    );
+
+                    let total;
+                    switch (totalType) {
+                      case "sum":
+                        total = numericValues.reduce((a, b) => a + b, 0);
+                        break;
+                      case "avg":
+                        total = numericValues.length
+                          ? numericValues.reduce((a, b) => a + b, 0) /
+                            numericValues.length
+                          : 0;
+                        break;
+                      case "min":
+                        total = numericValues.length
+                          ? Math.min(...numericValues)
+                          : "";
+                        break;
+                      case "max":
+                        total = numericValues.length
+                          ? Math.max(...numericValues)
+                          : "";
+                        break;
+                      case "product":
+                        total = numericValues.reduce((a, b) => a * b, 1);
+                        break;
+                      default:
+                        total = "";
+                    }
+
+                    return (
+                      <td
+                        key={columnId}
+                        style={{ fontWeight: "bold", background: "#f5f5f5" }}
+                      >
+                        {total}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+        {finalSettings.pagination &&
+          (paginationPosition === "bottomLeft" ||
+            paginationPosition === "bottomRight") && (
+            <Pagination table={table} position={paginationPosition} />
+          )}
+      </TableWrapper>
+    </TableContext.Provider>
   );
 };
 
-Table.whyDidYouRender = true;
 export default Table;
